@@ -1,5 +1,6 @@
 package com.example.weatherapi;
 
+import android.content.Context;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -24,77 +25,63 @@ import io.reactivex.rxjava3.annotations.NonNull;
 import io.reactivex.rxjava3.core.Scheduler;
 import io.reactivex.rxjava3.observers.DisposableObserver;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements Contract.View{
     private ActivityMainBinding binding;
     private String[] location_data,element_data,time_data,tw_element;
     private String selected_location,selected_element,selected_time;
     private getAPI getApi;
     private ApiClient apiClient;
+    private Contract.Presenter presenter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setDataBinding(); //set up databinding
         getData(); // load spinner data from resource
+        getTimeData();
+        getElementData();
+        setSpinner();
+
+        //presenter.getData();
         apiClient = new ApiClient();
         getApi = apiClient.myWeatherApi().create(getAPI.class);
-        setSpinner();
-        binding.mainSearchButton.setOnClickListener(view -> getWeather(selected_element,selected_location,selected_time)); // setting search button for new data
+        presenter = new Presenter(getApi ,this);
+        binding.mainSearchButton.setOnClickListener(view -> presenter.getWeather(selected_element,
+                selected_location,selected_time)); // setting search button for new data
 
     }
-
-    private void getWeather(String selectedElement, String selectedLocation, String selectedTime) {
-        String authorization = "CWA-25C9C6F3-AA7A-4C7F-9E21-F227628CE53B";
-        if(selectedElement.equals("All")) selectedElement=""; // if "All" is select , return empty string
-        String finalSelectedElement = selectedElement; //store final element
-        getApi.getWeatherApi(authorization,selectedLocation,finalSelectedElement)
-                .observeOn(Schedulers.io())
-                .subscribeOn(AndroidSchedulers.mainThread())
-                .subscribe(new DisposableObserver<WeatherResponse>() {
-                    @Override
-                    public void onNext(@NonNull WeatherResponse weatherResponse) {
-                        binding.mainResultTv.setText(""); //clear textview to remove previous data
-                        List time_list = Arrays.asList(time_data);// convert string to list
-                        List element_list = Arrays.asList(element_data); // convert string to list
-                        //check if user chose multiple element
-                        if(weatherResponse.getElementSize() != 1){
-                            for(int i=0 ; i<weatherResponse.getElementSize() ; i++){
-                                //append each element to textview
-                                binding.mainResultTv.append(tw_element[i] + weatherResponse.getDataByTime(i,time_list.indexOf(selectedTime))+"\n");
-                            }
-                        }
-                        else {
-                            //if single element is clicked , return it's data
-                            binding.mainResultTv.setText(tw_element[element_list.indexOf(finalSelectedElement)] + weatherResponse.getDataByTime(0,time_list.indexOf(selectedTime))+"\n");
-                        }
-                    }
-
-                    @Override
-                    public void onError(@NonNull Throwable e) {
-                        Log.d("test","onError:");
-                    }
-
-                    @Override
-                    public void onComplete() {
-                        Log.d("test","onComplete:");
-                    }
-                });
+    public String[] getTimeData(){
+        return time_data = getResources().getStringArray(R.array.time_data);
+    }
+    public String[] getElementData(){
+     return element_data = getResources().getStringArray(R.array.element_data);
+    }
+    public void setMultipleResultTextView(WeatherResponse weatherResponse ,
+                                         List time_list  , String selectedTime){
+        for(int i=0 ; i<weatherResponse.getElementSize() ; i++){
+            //append each element to textview
+            binding.mainResultTv.append(tw_element[i] + weatherResponse.getDataByTime(i,time_list.indexOf(selectedTime))+"\n");
+        }
+    }
+    public void setSingleResultTextView(WeatherResponse weatherResponse ,
+                                        List element_list  , List time_list,
+                                        String finalSelectedElement ,String selectedTime ){
+        binding.mainResultTv.setText(tw_element[element_list.indexOf(finalSelectedElement)]+ weatherResponse.getDataByTime(0,time_list.indexOf(selectedTime))+"\n");
     }
 
-
-    private void getData(){
+    public void getData(){
         location_data = getResources().getStringArray(R.array.location_data);
-        element_data = getResources().getStringArray(R.array.element_data);
-        time_data = getResources().getStringArray(R.array.time_data);
+
+
         tw_element = getResources().getStringArray(R.array.tw_element);
     }
-
     private void setDataBinding(){
         binding = DataBindingUtil.setContentView(this,R.layout.activity_main);
         binding.setView(this);
-
     }
-
+    public void setTextNull(){
+        binding.mainResultTv.setText("");
+    }
 
     private void setSpinner() {
         //initialize adapter for each spinner

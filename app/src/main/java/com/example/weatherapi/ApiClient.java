@@ -3,7 +3,7 @@ import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
 public class ApiClient {
-    public Retrofit myWeatherApi(){
+    public Retrofit myWeatherApi() {
         return new Retrofit.Builder()
                 .baseUrl("https://opendata.cwa.gov.tw/api/v1/rest/datastore/")
                 .addConverterFactory(GsonConverterFactory.create())
